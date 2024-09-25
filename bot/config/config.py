@@ -31,6 +31,6 @@ class Settings(BaseSettings):
 
     USE_TAP_BOT: bool = False
     EMERGENCY_STOP: bool = False
-
+    REF_ID: str = 'r_ac2a6eb415'
 
 settings = Settings()

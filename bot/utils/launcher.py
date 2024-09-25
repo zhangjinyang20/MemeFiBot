@@ -1,17 +1,16 @@
-import os
-import glob
-import asyncio
 import argparse
-from itertools import cycle
+import asyncio
+import glob
+import json
+import os
 
-from pyrogram import Client
 from better_proxy import Proxy
+from pyrogram import Client
 
 from bot.config import settings
-from bot.utils import logger
-from bot.core.tapper import run_tapper
 from bot.core.registrator import register_sessions
-
+from bot.core.tapper import run_tapper
+from bot.utils import logger
 
 start_text = """
 
@@ -67,7 +66,7 @@ async def process() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--action', type=int, help='Action to perform')
 
-    logger.info(f"Detected {len(get_session_names())} sessions | {len(get_proxies())} proxies")
+    logger.info(f"Detected {len(get_session_names())} sessions")
 
     action = parser.parse_args().action
 
@@ -93,10 +92,25 @@ async def process() -> None:
         await run_tasks(tg_clients=tg_clients)
 
 
-async def run_tasks(tg_clients: list[Client]):
-    proxies = get_proxies()
-    proxies_cycle = cycle(proxies) if proxies else None
-    tasks = [asyncio.create_task(run_tapper(tg_client=tg_client, proxy=next(proxies_cycle) if proxies_cycle else None))
-             for tg_client in tg_clients]
+def get_pro() -> dict:
+    with open('bot/config/proxies.json', 'r') as file:
+        data = json.load(file)
+    return data
 
+
+def get_proxie(di) -> str:
+    if settings.USE_PROXY_FROM_FILE:
+        return Proxy.from_str(proxy=di).as_url
+
+
+async def run_tasks(tg_clients: list[Client]):
+    pro = get_pro()
+    tasks = []
+    for tg_client in tg_clients:
+        tasks.append(asyncio.create_task(
+            run_tapper(
+                tg_client=tg_client,
+                proxy=get_proxie(pro[tg_client.name.strip()]),
+            )
+        ))
     await asyncio.gather(*tasks)
