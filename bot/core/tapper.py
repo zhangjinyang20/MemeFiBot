@@ -790,7 +790,7 @@ class Tapper:
                                                     '.')[0] + 'Z',
                                                 "%Y-%m-%dT%H:%M:%SZ").timestamp() + 8 * 3600 - datetime.now().timestamp() + 10
                                             logger.info(
-                                                f"{GetTaskById_2_response_json_f['name']}睡眠{int(sleep_time)}!")
+                                                f"{self.session_name}|{GetTaskById_2_response_json_f['name']}睡眠{int(sleep_time)}!")
                                             await asyncio.sleep(delay=int(sleep_time))
                                             CampaignTaskMarkAsCompleted = [{
                                                 "operationName": "CampaignTaskMarkAsCompleted",
@@ -803,7 +803,8 @@ class Tapper:
                                                 url=self.GRAPHQL_URL,
                                                 json=CampaignTaskMarkAsCompleted)
                                             GetTaskById_2_response.raise_for_status()
-                                            logger.info(f"{GetTaskById_2_response_json_f['name']}任务完成!")
+                                            logger.info(f"{self.session_name}|{GetTaskById_2_response_json_f['name']}任务完成!")
+                                            break
 
                         if available_energy < settings.MIN_AVAILABLE_ENERGY:
                             logger.info(f"{self.session_name} | Minimum energy reached: <ly>{available_energy:,}</ly>")
