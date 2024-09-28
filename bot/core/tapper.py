@@ -788,7 +788,9 @@ class Tapper:
                                             sleep_time = datetime.strptime(
                                                 GetTaskById_2_response_json_f['verificationAvailableAt'].split(
                                                     '.')[0] + 'Z',
-                                                "%Y-%m-%dT%H:%M:%SZ").timestamp() + 8 * 3600 - datetime.now().timestamp() + 10
+                                                "%Y-%m-%dT%H:%M:%SZ").timestamp() - datetime.now().timestamp() + 10
+                                            if sleep_time < 0:
+                                                continue
                                             logger.info(
                                                 f"{self.session_name}|{GetTaskById_2_response_json_f['name']}睡眠{int(sleep_time)}!")
                                             await asyncio.sleep(delay=int(sleep_time))
