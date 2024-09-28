@@ -461,6 +461,9 @@ class Tapper:
             logger.error(f"{self.session_name} | Proxy: {proxy} | Error: {error}")
 
     async def run(self, proxy: str | None):
+        random_delay = random.randint(0, 15)
+        logger.info(f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+        await asyncio.sleep(delay=random_delay)
         access_token_created_time = 0
         ends_at_logged_time = 0
         turbo_time = 0
