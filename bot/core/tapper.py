@@ -1,6 +1,6 @@
 import asyncio
-import json
-from datetime import datetime
+import random
+from datetime import datetime,timezone
 from random import randint
 from time import time
 from urllib.parse import unquote
@@ -88,7 +88,7 @@ class Tapper:
                 "operationName": "MutationTelegramUserLogin",
                 "variables": {
                     "webAppData": {
-                        "auth_date":ad ,
+                        "auth_date": ad,
                         "hash": hash_,
                         "query_id": "",
                         "checkDataString": f"auth_date={ad}\nchat_instance={chat_instance}\nchat_type={chat_type}\nstart_param={start_param}\nuser={user_data}",
@@ -308,6 +308,17 @@ class Tapper:
 
             return False
 
+    async def getTask(self, http_client: aiohttp.ClientSession):
+        json_data = [{
+            "operationName": "CampaignLists",
+            "variables": {},
+            "query": "fragment FragmentCampaign on CampaignOutput {\n  id\n  type\n  status\n  backgroundImageUrl\n  campaignUserParticipationId\n  completedTotalTasksAmount\n  description\n  endDate\n  iconUrl\n  isStarted\n  name\n  completionReward {\n    spinEnergyReward\n    coinsReward\n    claimedAt\n    id\n    __typename\n  }\n  totalRewardsPool\n  totalTasksAmount\n  collectedRewardsAmount\n  penaltyAmount\n  penaltySpinEnergyAmount\n  collectedSpinEnergyRewardsAmount\n  totalSpinEnergyRewardsPool\n  __typename\n}\n\nquery CampaignLists {\n  campaignLists {\n    special {\n      ...FragmentCampaign\n      __typename\n    }\n    normal {\n      ...FragmentCampaign\n      __typename\n    }\n    archivedCount\n    __typename\n  }\n}"
+        }]
+        response = await http_client.post(url=self.GRAPHQL_URL, json=json_data)
+        response.raise_for_status()
+        response_json = await response.json()
+        return response_json[0].get('data')['campaignLists']['normal']
+
     async def apply_boost(self, http_client: aiohttp.ClientSession, boost_type: FreeBoostType):
         try:
             json_data = {
@@ -487,10 +498,8 @@ class Tapper:
                         await self.get_telegram_me(http_client=http_client)
 
                         profile_data = await self.get_profile_data(http_client=http_client)
-
                         if not profile_data:
                             continue
-
                         balance = profile_data.get('coinsAmount', 0)
 
                         nonce = profile_data.get('nonce', '')
@@ -696,6 +705,105 @@ class Tapper:
                                 logger.warning(f"{self.session_name} | "
                                                f"Need more gold for upgrade charge to <lm>{next_energy_level}</lm> lvl "
                                                f"(<lc>{balance}</lc><lw>/</lw><le>{need_balance}</le>)")
+                        # 获取任务
+                        taskList = await self.getTask(http_client=http_client)
+                        for ts in taskList:
+                            if '▶' in ts['description'] and ts['isStarted'] is False:
+                                # 开始做任务
+                                params = [{
+                                    "operationName": "GetCampaignById",
+                                    "variables": {
+                                        "campaignId": ts['id']
+                                    },
+                                    "query": "fragment FragmentCampaign on CampaignOutput {\n  id\n  type\n  status\n  backgroundImageUrl\n  campaignUserParticipationId\n  completedTotalTasksAmount\n  description\n  endDate\n  iconUrl\n  isStarted\n  name\n  completionReward {\n    spinEnergyReward\n    coinsReward\n    claimedAt\n    id\n    __typename\n  }\n  totalRewardsPool\n  totalTasksAmount\n  collectedRewardsAmount\n  penaltyAmount\n  penaltySpinEnergyAmount\n  collectedSpinEnergyRewardsAmount\n  totalSpinEnergyRewardsPool\n  __typename\n}\n\nquery GetCampaignById($campaignId: String!) {\n  campaignGetById(campaignId: $campaignId) {\n    ...FragmentCampaign\n    __typename\n  }\n}"
+                                }]
+                                GetCampaignById_response = await http_client.post(url=self.GRAPHQL_URL,
+                                                                                  json=params)
+                                GetCampaignById_response.raise_for_status()
+                                GetCampaignById_response_json = await GetCampaignById_response.json()
+                                if GetCampaignById_response_json[0].get('data')['campaignGetById'][
+                                    'isStarted'] is False:
+                                    await asyncio.sleep(random.randint(1,4))
+                                    GetTasksList = [{
+                                        "operationName": "GetTasksList",
+                                        "variables": {
+                                            "campaignId": ts['id']
+                                        },
+                                        "query": "fragment FragmentCampaignTask on CampaignTaskOutput {\n  id\n  name\n  description\n  status\n  type\n  position\n  buttonText\n  coinsRewardAmount\n  spinEnergyRewardAmount\n  link\n  userTaskId\n  isRequired\n  iconUrl\n  taskVerificationType\n  verificationAvailableAt\n  shouldUseVpn\n  isLinkInternal\n  quiz {\n    id\n    question\n    answers\n    __typename\n  }\n  __typename\n}\n\nquery GetTasksList($campaignId: String!) {\n  campaignTasks(campaignConfigId: $campaignId) {\n    ...FragmentCampaignTask\n    __typename\n  }\n}"
+                                    }]
+                                    GetTasksList_response = await http_client.post(url=self.GRAPHQL_URL,
+                                                                                   json=GetTasksList)
+                                    GetTasksList_response.raise_for_status()
+                                    GetTasksList_response_json = await GetTasksList_response.json()
+                                    _id = GetTasksList_response_json[0].get('data')['campaignTasks'][0]['id']
+                                    await asyncio.sleep(random.randint(1,2))
+                                    GetTaskById = [{
+                                        "operationName": "GetTaskById",
+                                        "variables": {
+                                            "taskId": _id
+                                        },
+                                        "query": "fragment FragmentCampaignTask on CampaignTaskOutput {\n  id\n  name\n  description\n  status\n  type\n  position\n  buttonText\n  coinsRewardAmount\n  spinEnergyRewardAmount\n  link\n  userTaskId\n  isRequired\n  iconUrl\n  taskVerificationType\n  verificationAvailableAt\n  shouldUseVpn\n  isLinkInternal\n  quiz {\n    id\n    question\n    answers\n    __typename\n  }\n  __typename\n}\n\nquery GetTaskById($taskId: String!) {\n  campaignTaskGetConfig(taskId: $taskId) {\n    ...FragmentCampaignTask\n    __typename\n  }\n}"
+                                    }, {
+                                        "operationName": "TwitterProfile",
+                                        "variables": {},
+                                        "query": "query TwitterProfile {\n  twitterProfile {\n    username\n    __typename\n  }\n}"
+                                    }
+                                    ]
+                                    GetTaskById_response = await http_client.post(url=self.GRAPHQL_URL,
+                                                                                  json=GetTaskById)
+                                    GetTaskById_response.raise_for_status()
+                                    GetTaskById_response_json = await GetTaskById_response.json()
+                                    GetTaskById_response_json_f = GetTaskById_response_json[0].get('data')[
+                                        'campaignTaskGetConfig']
+                                    if GetTaskById_response_json_f['status'] == 'Pending':
+                                        await asyncio.sleep(random.randint(1, 3))
+                                        CampaignTaskToVerification = [{
+                                            "operationName": "CampaignTaskToVerification",
+                                            "variables": {
+                                                "taskConfigId": _id,
+                                            },
+                                            "query": "fragment FragmentCampaignTask on CampaignTaskOutput {\n  id\n  name\n  description\n  status\n  type\n  position\n  buttonText\n  coinsRewardAmount\n  spinEnergyRewardAmount\n  link\n  userTaskId\n  isRequired\n  iconUrl\n  taskVerificationType\n  verificationAvailableAt\n  shouldUseVpn\n  isLinkInternal\n  quiz {\n    id\n    question\n    answers\n    __typename\n  }\n  __typename\n}\n\nmutation CampaignTaskToVerification($taskConfigId: String!) {\n  campaignTaskMoveToVerificationV2(taskConfigId: $taskConfigId) {\n    ...FragmentCampaignTask\n    __typename\n  }\n}"
+                                        }]
+                                        await http_client.post(url=self.GRAPHQL_URL,
+                                                               json=CampaignTaskToVerification)
+                                        GetTaskById_two = [{
+                                            "operationName": "GetTaskById",
+                                            "variables": {
+                                                "taskId": _id,
+                                            },
+                                            "query": "fragment FragmentCampaignTask on CampaignTaskOutput {\n  id\n  name\n  description\n  status\n  type\n  position\n  buttonText\n  coinsRewardAmount\n  spinEnergyRewardAmount\n  link\n  userTaskId\n  isRequired\n  iconUrl\n  taskVerificationType\n  verificationAvailableAt\n  shouldUseVpn\n  isLinkInternal\n  quiz {\n    id\n    question\n    answers\n    __typename\n  }\n  __typename\n}\n\nquery GetTaskById($taskId: String!) {\n  campaignTaskGetConfig(taskId: $taskId) {\n    ...FragmentCampaignTask\n    __typename\n  }\n}"
+                                        }, {
+                                            "operationName": "TwitterProfile",
+                                            "variables": {},
+                                            "query": "query TwitterProfile {\n  twitterProfile {\n    username\n    __typename\n  }\n}"
+                                        }]
+                                        GetTaskById_2_response = await http_client.post(url=self.GRAPHQL_URL,
+                                                                                        json=GetTaskById_two)
+                                        GetTaskById_2_response.raise_for_status()
+                                        GetTaskById_2_response_json = await GetTaskById_2_response.json()
+                                        GetTaskById_2_response_json_f = \
+                                        GetTaskById_2_response_json[0].get('data')['campaignTaskGetConfig']
+                                        if GetTaskById_2_response_json_f['status'] == 'Verification':
+                                            userTaskId = GetTaskById_2_response_json_f['userTaskId']
+                                            sleep_time = datetime.strptime(
+                                                GetTaskById_2_response_json_f['verificationAvailableAt'].split(
+                                                    '.')[0] + 'Z',
+                                                "%Y-%m-%dT%H:%M:%SZ").timestamp() + 8 * 3600 - datetime.now().timestamp() + 10
+                                            logger.info(
+                                                f"{GetTaskById_2_response_json_f['name']}睡眠{int(sleep_time)}!")
+                                            await asyncio.sleep(delay=int(sleep_time))
+                                            CampaignTaskMarkAsCompleted = [{
+                                                "operationName": "CampaignTaskMarkAsCompleted",
+                                                "variables": {
+                                                    "userTaskId": userTaskId,
+                                                },
+                                                "query": "fragment FragmentCampaignTask on CampaignTaskOutput {\n  id\n  name\n  description\n  status\n  type\n  position\n  buttonText\n  coinsRewardAmount\n  spinEnergyRewardAmount\n  link\n  userTaskId\n  isRequired\n  iconUrl\n  taskVerificationType\n  verificationAvailableAt\n  shouldUseVpn\n  isLinkInternal\n  quiz {\n    id\n    question\n    answers\n    __typename\n  }\n  __typename\n}\n\nmutation CampaignTaskMarkAsCompleted($userTaskId: String!, $verificationCode: String, $quizAnswers: [CampaignTaskQuizQuestionInput!]) {\n  campaignTaskMarkAsCompleted(\n    userTaskId: $userTaskId\n    verificationCode: $verificationCode\n    quizAnswers: $quizAnswers\n  ) {\n    ...FragmentCampaignTask\n    __typename\n  }\n}"
+                                            }]
+                                            GetTaskById_2_response = await http_client.post(
+                                                url=self.GRAPHQL_URL,
+                                                json=CampaignTaskMarkAsCompleted)
+                                            GetTaskById_2_response.raise_for_status()
+                                            logger.info(f"{GetTaskById_2_response_json_f['name']}任务完成!")
 
                         if available_energy < settings.MIN_AVAILABLE_ENERGY:
                             logger.info(f"{self.session_name} | Minimum energy reached: <ly>{available_energy:,}</ly>")
