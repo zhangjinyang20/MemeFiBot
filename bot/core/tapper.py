@@ -497,7 +497,9 @@ class Tapper:
                         http_client.headers["Authorization"] = f"Bearer {access_token}"
 
                         access_token_created_time = time()
-
+                        random_delay = random.randint(0, 15)
+                        logger.info(f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+                        await asyncio.sleep(delay=random_delay)
                         await self.get_telegram_me(http_client=http_client)
 
                         profile_data = await self.get_profile_data(http_client=http_client)
@@ -709,6 +711,9 @@ class Tapper:
                                                f"Need more gold for upgrade charge to <lm>{next_energy_level}</lm> lvl "
                                                f"(<lc>{balance}</lc><lw>/</lw><le>{need_balance}</le>)")
                         # 获取任务
+                        random_delay = random.randint(15, 75)
+                        logger.info(f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+                        await asyncio.sleep(delay=random_delay)
                         taskList = await self.getTask(http_client=http_client)
                         for ts in taskList:
                             if '▶' in ts['description'] and ts['isStarted'] is False:
@@ -720,13 +725,20 @@ class Tapper:
                                     },
                                     "query": "fragment FragmentCampaign on CampaignOutput {\n  id\n  type\n  status\n  backgroundImageUrl\n  campaignUserParticipationId\n  completedTotalTasksAmount\n  description\n  endDate\n  iconUrl\n  isStarted\n  name\n  completionReward {\n    spinEnergyReward\n    coinsReward\n    claimedAt\n    id\n    __typename\n  }\n  totalRewardsPool\n  totalTasksAmount\n  collectedRewardsAmount\n  penaltyAmount\n  penaltySpinEnergyAmount\n  collectedSpinEnergyRewardsAmount\n  totalSpinEnergyRewardsPool\n  __typename\n}\n\nquery GetCampaignById($campaignId: String!) {\n  campaignGetById(campaignId: $campaignId) {\n    ...FragmentCampaign\n    __typename\n  }\n}"
                                 }]
+                                random_delay = random.randint(15, 75)
+                                logger.info(
+                                    f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+                                await asyncio.sleep(delay=random_delay)
                                 GetCampaignById_response = await http_client.post(url=self.GRAPHQL_URL,
                                                                                   json=params)
                                 GetCampaignById_response.raise_for_status()
                                 GetCampaignById_response_json = await GetCampaignById_response.json()
                                 if GetCampaignById_response_json[0].get('data')['campaignGetById'][
                                     'isStarted'] is False:
-                                    await asyncio.sleep(random.randint(1,4))
+                                    random_delay = random.randint(15, 75)
+                                    logger.info(
+                                        f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+                                    await asyncio.sleep(delay=random_delay)
                                     GetTasksList = [{
                                         "operationName": "GetTasksList",
                                         "variables": {
@@ -739,7 +751,10 @@ class Tapper:
                                     GetTasksList_response.raise_for_status()
                                     GetTasksList_response_json = await GetTasksList_response.json()
                                     _id = GetTasksList_response_json[0].get('data')['campaignTasks'][0]['id']
-                                    await asyncio.sleep(random.randint(1,2))
+                                    random_delay = random.randint(15, 75)
+                                    logger.info(
+                                        f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+                                    await asyncio.sleep(delay=random_delay)
                                     GetTaskById = [{
                                         "operationName": "GetTaskById",
                                         "variables": {
@@ -759,7 +774,10 @@ class Tapper:
                                     GetTaskById_response_json_f = GetTaskById_response_json[0].get('data')[
                                         'campaignTaskGetConfig']
                                     if GetTaskById_response_json_f['status'] == 'Pending':
-                                        await asyncio.sleep(random.randint(1, 3))
+                                        random_delay = random.randint(15, 75)
+                                        logger.info(
+                                            f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+                                        await asyncio.sleep(delay=random_delay)
                                         CampaignTaskToVerification = [{
                                             "operationName": "CampaignTaskToVerification",
                                             "variables": {
@@ -787,6 +805,10 @@ class Tapper:
                                         GetTaskById_2_response_json_f = \
                                         GetTaskById_2_response_json[0].get('data')['campaignTaskGetConfig']
                                         if GetTaskById_2_response_json_f['status'] == 'Verification':
+                                            random_delay = random.randint(15, 75)
+                                            logger.info(
+                                                f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+                                            await asyncio.sleep(delay=random_delay)
                                             userTaskId = GetTaskById_2_response_json_f['userTaskId']
                                             sleep_time = datetime.strptime(
                                                 GetTaskById_2_response_json_f['verificationAvailableAt'].split(
@@ -797,6 +819,10 @@ class Tapper:
                                             logger.info(
                                                 f"{self.session_name}|{GetTaskById_2_response_json_f['name']}睡眠{int(sleep_time)}!")
                                             await asyncio.sleep(delay=int(sleep_time))
+                                            random_delay = random.randint(15, 75)
+                                            logger.info(
+                                                f"{self.tg_client.name} | Bot will start in <light-red>{random_delay}s</light-red>")
+                                            await asyncio.sleep(delay=random_delay)
                                             CampaignTaskMarkAsCompleted = [{
                                                 "operationName": "CampaignTaskMarkAsCompleted",
                                                 "variables": {
